@@ -95,6 +95,17 @@ textarea{width:100%;min-height:180px;font:13px/1.4 ui-monospace,Menlo,monospace;
 .sub{color:var(--subc);font-weight:700;font-size:12px}
 .gbar.isub{box-shadow:inset 0 0 0 2.5px var(--subc)}
 .subitem{border-left-color:var(--subc)!important;background:color-mix(in srgb,var(--subc) 12%,transparent)!important}
+.cmode{display:flex;gap:6px;margin-bottom:10px}
+.cmode button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:700}
+.rc{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.rcin{position:relative}
+.rcrow{position:relative;border-bottom:1px solid var(--line)}
+.rclab{position:sticky;left:0;z-index:3;width:44px;height:100%;display:flex;align-items:center;justify-content:center;font-weight:700;background:var(--card);border-right:1px solid var(--line)}
+.rcb{position:absolute;top:4px;bottom:4px;border:1px solid #555;border-radius:3px;overflow:hidden;display:flex}
+.rcb.isub{box-shadow:0 0 0 2.5px var(--subc)}
+.rcg{background:#9A9A9A;height:100%}.rcy{background:#E4EE6A;height:100%}.rcs{background:#C8E6C0;height:100%;flex:1}.rco{background:#BFE3F2;height:100%;flex:1}
+.rct{position:absolute;left:3px;top:2px;right:2px;font-size:10.5px;line-height:1.3;color:#111;white-space:nowrap;pointer-events:none}
+.rcdone{opacity:.55}
 .legend{display:flex;flex-wrap:wrap;gap:6px 10px;font-size:12px;color:var(--sub);margin-bottom:8px}
 .legend span{display:inline-flex;align-items:center;gap:4px}
 .legend i{display:inline-block;width:14px;height:12px;border-radius:3px}
@@ -309,7 +320,35 @@ function renderWarn(sim){
   return h||'<p class="ok">重複も無人も代行もない</p>';
 }
 
+function renderRoomChart(sim){
+  const PX=1.6,RH=70,T=now();let lo=480,hi=1110;
+  for(const id in sim.ph){lo=Math.min(lo,Math.floor(sim.ph[id].in/60)*60);hi=Math.max(hi,Math.ceil(sim.ph[id].out/60)*60)}
+  const X=t=>44+(t-lo)*PX,W=44+(hi-lo)*PX,rooms=Object.keys(sim.byRoom).sort((a,b)=>a-b);
+  let h=`<div class="legend"><span><i class="rcg"></i>導入・抜管</span><span><i class="rcy"></i>手術</span><span><i class="rcs"></i>脊麻</span><span><i class="rco"></i>関与なし</span><span><i style="box-shadow:inset 0 0 0 2.5px var(--subc)"></i>代行あり</span><span><i style="opacity:.55;background:#9A9A9A"></i>終了</span></div>`;
+  h+=`<div class="rc"><div class="rcin" style="width:${W}px">`;
+  h+=`<div class="rcrow" style="height:22px"><div class="rclab" style="height:22px"></div>`;
+  for(let t=lo;t<=hi;t+=60)h+=`<div style="position:absolute;left:${X(t)+2}px;top:3px;font-size:11px;color:var(--sub)">${t/60}:00</div>`;
+  h+='</div>';
+  for(const r of rooms){h+=`<div class="rcrow" style="height:${RH}px"><div class="rclab" style="height:${RH}px">${r}室</div>`;
+    for(let t=lo;t<=hi;t+=60)h+=`<div style="position:absolute;left:${X(t)}px;top:0;bottom:0;border-left:1px solid var(--line)"></div>`;
+    for(const c0 of sim.byRoom[r]){const c=eff(c0),p=sim.ph[c.id],tot=p.out-p.in||1;
+      const done=(S.stamps[c.id]||{}).out!=null,sub=subsOf(c.id).length;
+      let inner;
+      if(c.type==='GA')inner=`<div class="rcg" style="width:${(p.cut-p.in)/tot*100}%"></div><div class="rcy" style="width:${(p.close-p.cut)/tot*100}%"></div><div class="rcg" style="flex:1"></div>`;
+      else inner=`<div class="${c.type==='spinal'?'rcs':'rco'}"></div>`;
+      const fr=(c.front||[]).map(f=>f[0]+(f[1]?' '+f[1]:'')).join('→');
+      const l2=c.type==='GA'?`前 ${fr}<br>導 ${(c.ind||[]).join('・')} 抜 ${(c.em||[]).join('・')}`:c.type==='spinal'?`刺す ${(c.ind||[]).join('・')}`:'関与なし';
+      h+=`<div class="rcb${sub?' isub':''}${done?' rcdone':''}" style="left:${X(p.in)}px;width:${Math.max(2,(p.out-p.in)*PX)}px" data-goto2="${c.id}">${inner}<div class="rct"><b>${c.id}</b> ${esc(c.label)}<br>${esc(l2).replace(/&lt;br&gt;/g,'<br>')}</div></div>`}
+    h+='</div>'}
+  if(T>=lo&&T<=hi)h+=`<div data-now="1" style="position:absolute;left:${X(T)}px;top:0;bottom:0;border-left:2px solid var(--warn);z-index:2"></div>`;
+  for(const x of S.plan.extras||[])if(x.k==='leave'){const t=tm(x.s);if(t>=lo&&t<=hi)h+=`<div style="position:absolute;left:${X(t)}px;top:0;bottom:0;border-left:1.5px dashed var(--warn);z-index:2"></div><div style="position:absolute;left:${X(t)+3}px;bottom:2px;font-size:10px;color:var(--warn);z-index:2">${esc(x.p)}退出</div>`}
+  return h+'</div></div><p class="help">横にスクロールできる。箱を押すと部屋タブのその症例が開く。時刻は記録に合わせた予測。</p>';
+}
 function renderChart(sim){
+  const tg=`<div class="cmode"><button data-cm="room" aria-pressed="${S.chartMode!=='person'}">部屋ごと</button><button data-cm="person" aria-pressed="${S.chartMode==='person'}">人ごと</button></div>`;
+  return tg+(S.chartMode==='person'?renderPersonChart(sim):renderRoomChart(sim));
+}
+function renderPersonChart(sim){
   const S0=480,E0=1080,P=1.15,H=(E0-S0)*P,T=now();
   let h=`<div class="legend"><span><i class="k-ind"></i>導入</span><span><i class="k-main"></i>維持</span><span><i class="k-em"></i>抜管</span><span><i class="k-spin"></i>脊麻</span><span><i class="k-sit"></i>在室</span><span><i class="k-brk"></i>休憩</span><span><i style="outline:1.5px dashed var(--sub);outline-offset:-2px"></i>拠点外</span><span><i style="box-shadow:inset 0 0 0 2.5px var(--subc)"></i>代行</span></div>`;
   h+=`<div style="display:flex;margin-left:34px;font-size:11px">${S.plan.people.map(P=>`<div style="flex:1;min-width:0;text-align:center"><b>${esc(P.n)}</b>${homeOf(P,sim)?`<div style="color:var(--acc)">拠点${homeOf(P,sim)}</div>`:'<div>&nbsp;</div>'}</div>`).join('')}</div>`;
@@ -343,10 +382,12 @@ function render(){
   const m=document.getElementById('main');
   const sy=window.scrollY||0,keepH=m.offsetHeight||0,sameView=window.__lastView===view;window.__lastView=view;
   if(sameView&&keepH)m.style.minHeight=keepH+'px';
+  const oldRc=document.querySelector('.rc'),rcLeft=oldRc&&sameView?oldRc.scrollLeft:null;
   if(view==='rooms'&&openId==null){const op=[...document.querySelectorAll('details[open]')].map(d=>d.dataset.cid).filter(Boolean);if(op.length)openId=op[0]}
   if(!S.plan.cases.length&&view!=='io'){m.innerHTML='<p class="ok">予定がまだない。取込タブでClaudeの取込データを貼って読み込む。</p>';document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===view));return}
   m.innerHTML=view==='soon'?renderSoon(sim):view==='people'?renderPeople(sim):view==='rooms'?renderRooms(sim):view==='chart'?renderChart(sim):view==='warn'?renderWarn(sim):renderIO();
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===view));
+  const rc=document.querySelector('.rc');if(rc){if(rcLeft!=null)rc.scrollLeft=rcLeft;else{const nl=rc.querySelector('[data-now]');if(nl)rc.scrollLeft=Math.max(0,parseFloat(nl.style.left)-120)}}
   if(sameView){if(window.scrollTo)window.scrollTo(0,sy);const rel=()=>{m.style.minHeight=''};if(window.requestAnimationFrame)requestAnimationFrame(()=>requestAnimationFrame(rel));else rel()}
 }
 
@@ -360,8 +401,10 @@ function validate(p){
 }
 
 document.addEventListener('click',e=>{
+  const bx=e.target.closest('[data-goto2]');if(bx){view='rooms';openId=bx.dataset.goto2;render();const el=document.querySelector('details[open]');if(el&&el.scrollIntoView)el.scrollIntoView({block:'center'});return}
   const sm=e.target.closest('summary');if(sm){const d=sm.parentElement;openId=d.open?null:d.dataset.cid;return}
   const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.cm){S.chartMode=t.dataset.cm;save();render();return}
   if(t.dataset.v){view=t.dataset.v;openId=null;render();return}
   if(t.dataset.goto){view='rooms';openId=t.dataset.goto;render();const el=document.querySelector('details[open]');if(el&&el.scrollIntoView)el.scrollIntoView({block:'center'});return}
   if(t.dataset.unovr){if(S.ovr){const[id,k]=t.dataset.unovr.split('|');delete S.ovr[id+'|'+k]}save();render();return}
