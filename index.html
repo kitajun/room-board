@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>部屋ボード</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="部屋ボード">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="robots" content="noindex,nofollow">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#F3F5F4;--card:#FFFFFF;--ink:#17222D;--sub:#5A6672;--line:#D5DBDF;
+--ind:#FFE14D;--indt:#4A3B00;--main:#BFE3F2;--maint:#0E3A4D;--em:#FFFFFF;--emt:#9C1C1C;--emr:#D7263D;
+--spin:#C9CDD1;--spint:#2B3036;--sit:#C8E6C0;--sitt:#1F4A16;--brk:transparent;--brkt:#5A6672;
+--warn:#D7263D;--warnbg:#FDECEE;--acc:#1D5FA8;--subc:#C2410C}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11161B;--card:#1A2129;--ink:#E7ECEF;--sub:#9AA6B1;--line:#2C3640;
+--ind:#C9A800;--indt:#1A1400;--main:#1E5C78;--maint:#E3F4FB;--em:#2A1518;--emt:#FFB3B3;--emr:#E5484D;
+--spin:#4A5058;--spint:#EEF0F2;--sit:#2E5A26;--sitt:#E2F4DC;--brkt:#9AA6B1;--warn:#FF6B6B;--warnbg:#3A1A1E;--acc:#6FA8E8;--subc:#FB923C}}
+:root[data-theme="dark"]{--bg:#11161B;--card:#1A2129;--ink:#E7ECEF;--sub:#9AA6B1;--line:#2C3640;
+--ind:#C9A800;--indt:#1A1400;--main:#1E5C78;--maint:#E3F4FB;--em:#2A1518;--emt:#FFB3B3;--emr:#E5484D;
+--spin:#4A5058;--spint:#EEF0F2;--sit:#2E5A26;--sitt:#E2F4DC;--brkt:#9AA6B1;--warn:#FF6B6B;--warnbg:#3A1A1E;--acc:#6FA8E8;--subc:#FB923C}
+*{box-sizing:border-box}
+html,body{overscroll-behavior:none;touch-action:manipulation}
+button,select,input,summary,a,.seg,.room,.person{touch-action:manipulation}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP",sans-serif;font-size:15px;line-height:1.5}
+body{max-width:720px;margin:0 auto}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:10px 14px 0;border-bottom:1px solid var(--line)}
+.clockrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.clock{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.5px}
+.date{color:var(--sub);font-size:13px}
+.clockctl{display:flex;gap:6px;align-items:center;margin-left:auto}
+button,select,input{font:inherit;color:inherit}
+button{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;min-height:36px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:700}
+input[type=time]{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px 6px;min-height:36px;font-variant-numeric:tabular-nums}
+nav{display:flex;gap:0;margin-top:8px}
+nav button{flex:1;border:none;border-bottom:3px solid transparent;border-radius:0;background:none;padding:8px 0;color:var(--sub)}
+nav button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ink);font-weight:700}
+.badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--warn);color:#fff;font-size:12px;margin-left:4px}
+main{padding:12px 14px 40px}
+.person,.room{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.phead{display:flex;align-items:baseline;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.pname{font-size:18px;font-weight:700}
+.role{font-size:12px;color:var(--sub)}
+.nowloc{margin-left:auto;font-size:13px;font-weight:700}
+.seg{display:grid;grid-template-columns:92px 54px 1fr;gap:8px;align-items:center;padding:6px 12px;border-bottom:1px solid var(--line);font-size:14px}
+.seg:last-child{border-bottom:none}
+.seg.past{opacity:.45}
+.seg.now{background:color-mix(in srgb,var(--acc) 10%,transparent)}
+.tm{font-variant-numeric:tabular-nums;color:var(--sub);font-size:13px}
+.chip{display:inline-flex;align-items:center;justify-content:center;border-radius:5px;padding:1px 0;font-size:12px;font-weight:700;width:54px}
+.k-ind{background:var(--ind);color:var(--indt)}
+.k-main{background:var(--main);color:var(--maint)}
+.k-em{background:var(--em);color:var(--emt);box-shadow:inset 0 0 0 1.5px var(--emr);background-image:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--emr) 22%,transparent) 6px 8px)}
+.k-spin{background:var(--spin);color:var(--spint)}
+.k-sit{background:var(--sit);color:var(--sitt)}
+.k-brk{background:var(--brk);color:var(--brkt);box-shadow:inset 0 0 0 1px var(--line)}
+.conf{color:var(--warn);font-weight:700;font-size:12px}
+.rhead{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.rnum{font-size:22px;font-weight:700;min-width:46px}
+.rstate{font-size:14px}
+.rstate b{font-size:16px}
+.rnext{margin-left:auto}
+.cases{border-top:1px solid var(--line)}
+.crow{padding:8px 12px;border-bottom:1px solid var(--line)}
+.crow:last-child{border-bottom:none}
+.ctop{display:flex;gap:8px;align-items:baseline}
+.cid{font-weight:700}
+.clabel{color:var(--sub);font-size:13px}
+.ctimes{margin-left:auto;font-variant-numeric:tabular-nums;font-size:13px}
+.stamps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.stamps label{font-size:11px;color:var(--sub);display:flex;flex-direction:column;gap:2px}
+.stamps input{width:100%}
+.stamps input.set{border-color:var(--ink);font-weight:700}
+details summary{cursor:pointer;color:var(--sub);font-size:13px;padding:6px 12px}
+.warnitem{background:var(--warnbg);border-left:4px solid var(--warn);border-radius:0;padding:8px 12px;margin-bottom:8px}
+.warnitem .wt{font-weight:700}
+.ok{color:var(--sub);padding:20px 0;text-align:center}
+textarea{width:100%;min-height:180px;font:13px/1.4 ui-monospace,Menlo,monospace;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.msg{font-size:13px;margin-top:6px}
+.msg.err{color:var(--warn)}
+.grid{display:flex;position:relative}
+.gcol{flex:1;min-width:0;position:relative;border-left:1px solid var(--line)}
+.gbar{position:absolute;left:1px;right:1px;border-radius:3px;font-size:11px;display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:700;letter-spacing:-.3px}
+.gbar.away{outline:1.5px dashed currentColor;outline-offset:-2px}
+.nowline{position:absolute;left:34px;right:0;border-top:2px solid var(--warn);z-index:2}
+.sub{color:var(--subc);font-weight:700;font-size:12px}
+.gbar.isub{box-shadow:inset 0 0 0 2.5px var(--subc)}
+.subitem{border-left-color:var(--subc)!important;background:color-mix(in srgb,var(--subc) 12%,transparent)!important}
+.legend{display:flex;flex-wrap:wrap;gap:6px 10px;font-size:12px;color:var(--sub);margin-bottom:8px}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.legend i{display:inline-block;width:14px;height:12px;border-radius:3px}
+.help{color:var(--sub);font-size:13px}
+.reas{border-top:1px dashed var(--line);margin-top:6px;padding-top:6px}
+select{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px 6px;min-height:34px}
+</style>
+</head>
+<body>
+<header>
+  <div class="clockrow">
+    <div>
+      <div class="clock" id="clock">--:--</div>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="clockctl">
+      <select id="mode" aria-label="時刻の扱い">
+        <option value="real">実時刻</option>
+        <option value="manual">手動</option>
+      </select>
+      <button id="minus" aria-label="15分戻す">−15</button>
+      <button id="plus" aria-label="15分進める">+15</button>
+    </div>
+  </div>
+  <nav role="tablist">
+    <button role="tab" data-v="soon" aria-selected="true">直近</button>
+    <button role="tab" data-v="people" aria-selected="false">人</button>
+    <button role="tab" data-v="rooms" aria-selected="false">部屋</button>
+    <button role="tab" data-v="chart" aria-selected="false">図</button>
+    <button role="tab" data-v="warn" aria-selected="false">警告<span class="badge" id="wcount" hidden></span></button>
+    <button role="tab" data-v="io" aria-selected="false">取込</button>
+  </nav>
+</header>
+<main id="main"></main>
+
+<script>
+const DEFAULT={"date":"","people":[],"cases":[],"extras":[]};
+
+const KEY='orboard_v1';
+const TURN=15;
+const KL={ind:'導入',main:'維持',em:'抜管',spin:'脊麻',sit:'在室',brk:'休憩'};
+const B=['in','cut','close','out'];
+const BL={in:'入室',cut:'執刀',close:'終了',out:'退室'};
+let S=load();
+let view='soon',openId=null;
+
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.plan)return s}catch(e){}
+  return{plan:DEFAULT,stamps:{},mode:null,manual:480}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const tm=s=>{if(s==null||s==='')return null;const[a,b]=String(s).split(':');return +a*60+ +b};
+const hm=m=>m==null?'--:--':String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.round(m)%60).padStart(2,'0');
+const roomOf=id=>+id.split('-')[0];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function mode(){return S.mode||(S.plan.date===today()?'real':'manual')}
+function now(){if(mode()==='real'){const d=new Date();return d.getHours()*60+d.getMinutes()}return S.manual}
+
+function timeline(Tx){
+  const T=Tx??now(),out={},byRoom={};
+  for(const c of S.plan.cases){(byRoom[roomOf(c.id)]=byRoom[roomOf(c.id)]||[]).push(c)}
+  for(const r in byRoom){
+    byRoom[r].sort((a,b)=>+a.id.split('-')[1]-+b.id.split('-')[1]);
+    let prev=null,prevLive=false;
+    for(const c of byRoom[r]){
+      const A=S.stamps[c.id]||{},d=c.dur||[30,60,30];
+      const fix=(k,v)=>A[k]!=null?A[k]:Math.max(v,T);
+      const sch=(S.sched||{})[c.id];
+      const base=sch!=null?sch:prev==null?tm(c.start):prevLive?prev+TURN:Math.max(tm(c.start),prev);
+      const i=fix('in',base);
+      prevLive=prevLive||Object.keys(A).length>0||sch!=null;
+      const cu=fix('cut',i+d[0]),cl=fix('close',cu+d[1]),o=fix('out',cl+d[2]);
+      out[c.id]={in:i,cut:cu,close:cl,out:o};prev=o;
+    }
+  }
+  return{ph:out,byRoom};
+}
+
+function eff(c){const o=(S.ovr||{});const k=x=>o[c.id+'|'+x];if(!k('ind')&&!k('em')&&!k('main'))return c;
+  const d=Object.assign({},c);if(k('ind'))d.ind=k('ind');if(k('em'))d.em=k('em');if(k('main'))d.front=[[k('main')[0]]];return d}
+function tasks(ph){
+  const L0=[],L={push:o=>{const c=S.plan.cases.find(c=>c.id===o.id);if(c&&c.owner&&c.owner.length&&!c.owner.includes(o.p)&&o.k!=='brk'){o.sub=1;o.owner=c.owner}L0.push(o)}};
+  for(const c0 of S.plan.cases){const c=eff(c0);
+    const p=ph[c.id],room=roomOf(c.id);
+    if(c.type==='spinal'){(c.ind||[]).forEach(n=>L.push({p:n,k:'spin',room,id:c.id,s:p.in,e:p.in+20}));continue}
+    if(c.type!=='GA')continue;
+    (c.ind||[]).forEach(n=>L.push({p:n,k:'ind',room,id:c.id,s:p.in,e:p.cut}));
+    (c.em||[]).forEach(n=>L.push({p:n,k:'em',room,id:c.id,s:p.close,e:p.out}));
+    const f=c.front||[];
+    f.forEach((x,j)=>{const s=j===0?p.in:Math.max(p.in,tm(x[1]));const e=j<f.length-1?Math.min(p.out,tm(f[j+1][1])):p.out;if(e>s)L.push({p:x[0],k:'main',room,id:c.id,s,e})});
+  }
+  for(const x of S.plan.extras||[]){
+    if(x.k==='sit')L.push({p:x.p,k:'sit',room:x.room,id:null,s:tm(x.s),e:tm(x.e)});
+    if(x.k==='break')L.push({p:x.p,k:'brk',room:null,id:null,s:tm(x.s),e:tm(x.e)});
+  }
+  return L0;
+}
+
+const RANK={ind:4,em:4,spin:4,brk:3,sit:2,main:1};
+function simulate(){
+  const{ph,byRoom}=timeline(),L=tasks(ph),subs=L.filter(x=>x.sub).sort((a,b)=>a.s-b.s);window.__subs=subs;
+  const leave={};(S.plan.extras||[]).filter(x=>x.k==='leave').forEach(x=>leave[x.p]=tm(x.s));
+  const t0=450,t1=1440,loc={},alls={},conf=[];
+  for(const P of S.plan.people){
+    const n=P.n,mine=L.filter(x=>x.p===n),arr=[],all=[];
+    for(let t=t0;t<t1;t++){
+      if(leave[n]!=null&&t>=leave[n]){arr.push(null);all.push([]);continue}
+      const on=mine.filter(x=>x.s<=t&&t<x.e);
+      if(!on.length){arr.push(null);all.push([]);continue}
+      on.sort((a,b)=>RANK[b.k]-RANK[a.k]);
+      const act=on.filter(x=>RANK[x.k]===4);
+      if(act.length>1&&new Set(act.map(x=>x.room)).size>1)conf.push({p:n,t,a:act.map(x=>x.id+KL[x.k])});
+      arr.push(on[0]);all.push(on);
+    }
+    loc[n]=arr;alls[n]=all;
+  }
+  const occ=(room,t)=>S.plan.people.some(P=>{const x=loc[P.n][t-t0];if(!x)return false;if(x.room===room&&x.k!=='brk')return true;
+    return P.dual&&(x.k==='main'||x.k==='sit')&&alls[P.n][t-t0].some(y=>y.room===room&&y.k==='main')});
+  const unat=[];
+  for(const c of S.plan.cases){if(c.type!=='GA')continue;const p=ph[c.id],room=roomOf(c.id);let st=null;
+    for(let t=p.in;t<=Math.min(p.out,t1-1);t++){const e=t<p.out&&!occ(room,t);if(e&&st==null)st=t;if(!e&&st!=null){if(t-st>=5)unat.push({room,id:c.id,s:st,e:t});st=null}}}
+  const cg=[];for(const x of conf){const l=cg[cg.length-1];if(l&&l.p===x.p&&l.e===x.t&&l.a.join()===x.a.join())l.e=x.t+1;else cg.push({p:x.p,s:x.t,e:x.t+1,a:x.a})}
+  return{ph,byRoom,loc,alls,t0,unat,subs,L,conf:cg.filter(x=>x.e-x.s>=1)};
+}
+
+function segments(arr,t0){
+  const out=[];let cur=null;
+  arr.forEach((x,i)=>{const key=x?x.k+'|'+x.room+'|'+(x.id||'')+'|'+(x.sub||''):'';
+    if(cur&&cur.key===key){cur.e=t0+i+1;return}
+    if(x)cur={key,x,s:t0+i,e:t0+i+1},out.push(cur);else cur=null});
+  return out;
+}
+function homeOf(P,sim){if(P.home)return P.home;const c={};for(const x of sim.loc[P.n])if(x&&x.room&&x.k!=='brk')c[x.room]=(c[x.room]||0)+1;
+  let b=null;for(const r in c)if(b==null||c[r]>c[b])b=r;return b==null?null:+b}
+function labelOf(id){const c=S.plan.cases.find(c=>c.id===id);return c?c.label:''}
+
+function renderPeople(sim){
+  const T=now();let h='';
+  for(const P of S.plan.people){
+    const sg=segments(sim.loc[P.n],sim.t0),cur=sim.loc[P.n][T-sim.t0];
+    const also=P.dual&&cur&&(cur.k==='main'||cur.k==='sit')?[...new Set(sim.alls[P.n][T-sim.t0].filter(y=>y.k==='main'&&y.id!==cur.id).map(y=>y.id))]:[];
+    const where=(cur?(cur.k==='brk'?'休憩中':(cur.id||cur.room+'室')+' '+KL[cur.k]):'空き')+(also.length?' ＋'+also.join('・')+' 兼務':'');
+    h+=`<section class="person"><div class="phead"><span class="pname">${esc(P.n)}</span><span class="role">${esc(P.role||'')}${homeOf(P,sim)?' 拠点'+homeOf(P,sim):''}</span><span class="nowloc">${esc(where)}</span></div>`;
+    if(!sg.length)h+=`<div class="seg"><span></span><span></span><span class="help">予定なし</span></div>`;
+    for(const s of sg){const x=s.x,c=sim.conf.find(q=>q.p===P.n&&q.s<s.e&&s.s<q.e);
+      const subt=x.sub?` <span class="sub">代行(本来 ${esc(x.owner.join('・'))})</span>`:'';
+      const what=x.k==='brk'?'':(x.id?`<b>${x.id}</b> <span class="clabel">${esc(labelOf(x.id))}</span>`:`<b>${x.room}室</b> <span class="clabel">交代・留守番</span>`);
+      const hr=homeOf(P,sim),away=hr&&x.room&&x.room!==hr&&x.k!=='brk'?' <span class="clabel">拠点外</span>':'';
+      h+=`<div class="seg ${s.e<=T?'past':''} ${s.s<=T&&T<s.e?'now':''}"><span class="tm">${hm(s.s)}–${hm(s.e)}</span><span class="chip k-${x.k}">${KL[x.k]}</span><span>${what}${away}${subt}${c?' <span class="conf">重複</span>':''}</span></div>`}
+    h+='</section>';
+  }
+  return h;
+}
+
+function nextStamp(cases){for(const c of cases){const A=S.stamps[c.id]||{};for(const b of B)if(A[b]==null)return{c,b}}return null}
+function roomState(cases,ph,T){
+  for(const c of cases){const p=ph[c.id];if(p.in<=T&&T<p.out){const A=S.stamps[c.id]||{};
+    if(A.in==null)return{c,txt:'入室待ち'};
+    const st=T<p.cut?'導入中':T<p.close?'執刀中':'終了〜退室';return{c,txt:st}}}
+  const nx=cases.find(c=>ph[c.id].in>T);if(!nx)return{c:null,txt:'本日終了'};return{c:null,txt:(cases.indexOf(nx)>0?'入れ替え中。次は ':'入室前。最初は ')+nx.id+' '+hm(ph[nx.id].in)+'予定'};
+}
+function subsOf(id){return (window.__subs||[]).filter(x=>x.id===id)}
+function pick(id,k,i,cur){const ns=S.plan.people.map(P=>P.n);
+  return `<select data-ovr="${id}|${k}|${i}"><option value="">${i?'(なし)':'—'}</option>${ns.map(n=>`<option${n===cur?' selected':''}>${esc(n)}</option>`).join('')}</select>`}
+function reassignUI(c){if(c.type!=='GA'&&c.type!=='spinal')return '';const e=eff(c),o=S.ovr||{};
+  const rows=c.type==='spinal'?[['ind','脊麻',e.ind||[]]]:[['ind','導入',e.ind||[]],['main','維持',(e.front||[]).map(f=>f[0]).slice(0,1)],['em','抜管',e.em||[]]];
+  let h='<div class="reas"><div class="help">担当の付け替え</div>';
+  for(const[k,lab,ns]of rows){const ch=o[c.id+'|'+k];
+    h+=`<div class="row" style="align-items:center;margin:4px 0"><span style="width:34px;font-size:13px">${lab}</span>${pick(c.id,k,0,ns[0])}${k!=='main'?pick(c.id,k,1,ns[1]):''}${ch?`<button data-unovr="${c.id}|${k}">元に戻す</button>`:''}</div>`}
+  return h+'</div>'}
+function renderRooms(sim){
+  const T=now();let h='<p class="help">「いま」が部屋の現在の状態。その下で、次に記録する項目を時刻を入れて記録するか、予定どおりの時刻で記録する。前の症例を記録すると、次の入室は退室の15分後で予測し直す。入室時刻だけ先に決まったときは、症例を開いて「入室予定を変更」に入れる。</p>';
+  for(const r of Object.keys(sim.byRoom).sort((a,b)=>a-b)){
+    const cs=sim.byRoom[r],st=roomState(cs,sim.ph,T),nx=nextStamp(cs);
+    h+=`<section class="room"><div class="rhead"><span class="rnum">${r}室</span><span class="rstate"><span class="help">いま </span>${st.c?'<b>'+st.c.id+'</b> ':''}${st.txt}</span>`;
+    
+    if(nx)h+=`</div><div class="row" style="padding:0 12px 10px;align-items:center"><span class="help" style="width:100%">次に記録するのは <b style="color:var(--ink)">${nx.c.id} の${BL[nx.b]}</b></span><input type="time" id="st-${r}" value="${hm(T)}" aria-label="${nx.c.id} ${BL[nx.b]}の時刻"><button class="primary" data-stampat="${nx.c.id}|${nx.b}|${r}">${BL[nx.b]}を記録</button>${nx.b==='in'&&cs.indexOf(nx.c)>0?'':`<button data-stampplan="${nx.c.id}|${nx.b}">予定どおり(${hm(timeline(-1).ph[nx.c.id][nx.b])})で${BL[nx.b]}を記録</button>`}`;
+    if(nx&&nx.b==='in'&&cs.indexOf(nx.c)>0){const sv=(S.sched||{})[nx.c.id];
+      h+=`</div><div class="row" style="padding:0 12px 10px;align-items:center;border-top:1px dashed var(--line);padding-top:8px"><span class="help">${nx.c.id} の入室予定</span><input type="time" id="sc-${r}" value="${hm(sv!=null?sv:sim.ph[nx.c.id].in)}" aria-label="${nx.c.id}の入室予定"><button data-setsched="${nx.c.id}|${r}">予定に入れる</button>${sv!=null?`<button data-unsched="${nx.c.id}">元に戻す</button>`:''}`}
+    h+=`</div><div class="cases">`;
+    for(const c of cs){const p=sim.ph[c.id],A=S.stamps[c.id]||{},tag=c.type==='GA'?'':c.type==='spinal'?' 脊麻':' 関与なし';
+      h+=`<details class="crow" data-cid="${c.id}"${openId===c.id?' open':''}><summary data-sum="1"><span class="ctop" style="display:inline-flex;width:calc(100% - 20px)"><span class="cid">${c.id}</span><span class="clabel">${esc(c.label)}${tag}${c.owner&&c.owner.length?' 担当 '+esc(c.owner.join('・')):''}${subsOf(c.id).length?' <span class="sub">代行あり</span>':''}</span><span class="ctimes">${hm(p.in)}–${hm(p.out)}</span></span></summary><div class="stamps">`;
+      for(const b of B)h+=`<label>${BL[b]}<input type="time" class="${A[b]!=null?'set':''}" data-edit="${c.id}|${b}" value="${A[b]!=null?hm(A[b]):''}" placeholder="${hm(p[b])}"></label>`;
+      h+=`</div><div class="row"><span class="help">予測 ${hm(p.in)} / ${hm(p.cut)} / ${hm(p.close)} / ${hm(p.out)}</span><button data-clear="${c.id}">記録を消す</button></div><div class="row" style="align-items:center"><span class="help">入室予定を変更</span><input type="time" data-sched="${c.id}" value="${(S.sched||{})[c.id]!=null?hm(S.sched[c.id]):''}">${(S.sched||{})[c.id]!=null?`<button data-unsched="${c.id}">元に戻す</button>`:''}</div>${reassignUI(c)}</details>`}
+    h+=`</div><div class="row" style="padding:0 12px 10px"><button data-asplan="${r}">今までを予定どおりで記録</button><button data-undo="${r}">直前の記録を取り消す</button></div></section>`;
+  }
+  return h;
+}
+
+function renderSoon(sim){const T=now(),W=T+30;let it=[];
+  const g={};for(const x of sim.L){if(!['ind','em','spin'].includes(x.k))continue;if(x.e<=T||x.s>W)continue;const key=x.id+x.k;(g[key]=g[key]||{id:x.id,k:x.k,s:x.s,e:x.e,ps:[],sub:0,owner:x.owner}).ps.push(x.p);if(x.sub){g[key].sub=1;g[key].owner=x.owner}}
+  for(const k in g)it.push({t:g[k].s,type:'act',...g[k]});
+  for(const u of sim.unat)if(u.e>T&&u.s<=W)it.push({t:u.s,type:'unat',...u});
+  for(const c of sim.conf)if(c.e>T&&c.s<=W)it.push({t:c.s,type:'conf',...c});
+  it.sort((a,b)=>a.t-b.t);
+  let h=`<p class="help">${hm(T)}〜${hm(W)} に起きること。進行中のものは時刻を太字にしている</p>`;
+  const free=S.plan.people.filter(P=>/専門医|キャプテン|外勤/.test(P.role||'')).map(P=>{const x=sim.loc[P.n][T-sim.t0];const lv=(S.plan.extras||[]).find(e=>e.k==='leave'&&e.p===P.n&&tm(e.s)<=T);if(lv)return null;
+    if(x&&['ind','em','spin','brk'].includes(x.k))return null;const nx=sim.L.filter(y=>y.p===P.n&&['ind','em','spin'].includes(y.k)&&y.s>T).sort((a,b)=>a.s-b.s)[0];
+    return `<b>${esc(P.n)}</b>${x?'('+(x.id||x.room+'室')+' '+KL[x.k]+')':'(空き)'}${nx?' 次 '+hm(nx.s):''}`}).filter(Boolean);
+  h+=`<div class="seg" style="grid-template-columns:1fr"><span><span class="help">いま呼べる専門医 </span>${free.length?free.join('、'):'なし'}</span></div>`;
+  if(!it.length)return h+'<p class="ok">この30分は導入・抜管・無人なし</p>';
+  for(const x of it){const live=x.s<=T;const tt=`<span class="tm"${live?' style="font-weight:700;color:var(--ink)"':''}>${hm(x.s)}–${hm(x.e)}</span>`;
+    if(x.type==='act')h+=`<div class="seg"${x.sub?' style="background:color-mix(in srgb,var(--subc) 12%,transparent)"':''}>${tt}<span class="chip k-${x.k}">${KL[x.k]}</span><span><b>${x.id}</b> ${esc(x.ps.join('・'))}${x.sub?` <span class="sub">代行(本来 ${esc(x.owner.join('・'))})</span>`:''} <button data-goto="${x.id}" style="min-height:28px;padding:2px 8px;font-size:12px">付け替え</button></span></div>`;
+    else if(x.type==='unat')h+=`<div class="seg" style="background:var(--warnbg)">${tt}<span class="chip" style="background:var(--warn);color:#fff">無人</span><span><b>${x.room}室</b> ${x.id}</span></div>`;
+    else h+=`<div class="seg" style="background:var(--warnbg)">${tt}<span class="chip" style="background:var(--warn);color:#fff">重複</span><span><b>${esc(x.p)}</b> ${esc(x.a.join(' と '))}</span></div>`}
+  return `<section class="person">${h}</section>`}
+function renderWarn(sim){
+  let h='';
+  for(const c of sim.conf)h+=`<div class="warnitem"><div class="wt">${esc(c.p)} が重複 ${hm(c.s)}–${hm(c.e)}</div><div>${esc(c.a.join(' と '))}</div></div>`;
+  for(const x of sim.subs)h+=`<div class="warnitem subitem"><div class="wt">${x.id} ${KL[x.k]} ${hm(x.s)}–${hm(x.e)} を${esc(x.p)}が代行</div><div>本来の担当 ${esc(x.owner.join('・'))}。${esc(labelOf(x.id))}</div></div>`;
+  for(const u of sim.unat)h+=`<div class="warnitem"><div class="wt">${u.room}室 無人 ${hm(u.s)}–${hm(u.e)}</div><div>${u.id} ${esc(labelOf(u.id))}</div></div>`;
+  return h||'<p class="ok">重複も無人も代行もない</p>';
+}
+
+function renderChart(sim){
+  const S0=480,E0=1080,P=1.15,H=(E0-S0)*P,T=now();
+  let h=`<div class="legend"><span><i class="k-ind"></i>導入</span><span><i class="k-main"></i>維持</span><span><i class="k-em"></i>抜管</span><span><i class="k-spin"></i>脊麻</span><span><i class="k-sit"></i>在室</span><span><i class="k-brk"></i>休憩</span><span><i style="outline:1.5px dashed var(--sub);outline-offset:-2px"></i>拠点外</span><span><i style="box-shadow:inset 0 0 0 2.5px var(--subc)"></i>代行</span></div>`;
+  h+=`<div style="display:flex;margin-left:34px;font-size:11px">${S.plan.people.map(P=>`<div style="flex:1;min-width:0;text-align:center"><b>${esc(P.n)}</b>${homeOf(P,sim)?`<div style="color:var(--acc)">拠点${homeOf(P,sim)}</div>`:'<div>&nbsp;</div>'}</div>`).join('')}</div>`;
+  h+=`<div class="grid" style="height:${H}px"><div style="width:34px;flex:none;position:relative">`;
+  for(let k=8;k<=18;k++)h+=`<div style="position:absolute;top:${(k*60-S0)*P-7}px;font-size:11px;color:var(--sub)">${k}:00</div>`;
+  h+='</div>';
+  for(const Pn of S.plan.people){h+='<div class="gcol">';
+    for(let k=8;k<=18;k++)h+=`<div style="position:absolute;left:0;right:0;top:${(k*60-S0)*P}px;border-top:1px solid var(--line)"></div>`;
+    for(const s of segments(sim.loc[Pn.n],sim.t0)){if(s.e<=S0||s.s>=E0)continue;const x=s.x,y=(Math.max(s.s,S0)-S0)*P,hh=(Math.min(s.e,E0)-Math.max(s.s,S0))*P;
+      const lab=x.k==='brk'?'休':(x.id||x.room+'室');const hr=homeOf(Pn,sim),away=hr&&x.room&&x.room!==hr&&x.k!=='brk';
+      h+=`<div class="gbar k-${x.k}${away?' away':''}${x.sub?' isub':''}" style="top:${y}px;height:${hh-1}px">${hh>=13?lab:''}</div>`}
+    h+='</div>'}
+  if(T>=S0&&T<=E0)h+=`<div class="nowline" style="top:${(T-S0)*P}px"></div>`;
+  return h+'</div>';
+}
+
+function renderIO(){
+  return `<p class="help">Claudeが出した予定データを貼り付けて「読み込む」を押す。読み込むと、ステータスの記録はすべて消える。</p>
+  <textarea id="imp" placeholder="ここに貼り付け" spellcheck="false"></textarea>
+  <div class="row"><button class="primary" id="doimp">読み込む</button><button id="doexp">今の予定を書き出す</button><button id="doreset">予定と記録を消す</button></div>
+  <div class="msg" id="iomsg"></div>
+  <p class="help">予定日 ${esc(S.plan.date||'未設定')}、症例 ${S.plan.cases.length}件、人 ${S.plan.people.length}人</p>`;
+}
+
+function render(){
+  const sim=simulate(),T=now();
+  document.getElementById('clock').textContent=hm(T);
+  document.getElementById('date').textContent=(S.plan.date||'')+(mode()==='manual'?' 手動時刻':'');
+  document.getElementById('mode').value=mode();
+  const n=sim.conf.length+sim.unat.length,wc=document.getElementById('wcount');wc.hidden=!n;wc.textContent=n;
+  const m=document.getElementById('main');
+  const sy=window.scrollY||0,keepH=m.offsetHeight||0,sameView=window.__lastView===view;window.__lastView=view;
+  if(sameView&&keepH)m.style.minHeight=keepH+'px';
+  if(view==='rooms'&&openId==null){const op=[...document.querySelectorAll('details[open]')].map(d=>d.dataset.cid).filter(Boolean);if(op.length)openId=op[0]}
+  if(!S.plan.cases.length&&view!=='io'){m.innerHTML='<p class="ok">予定がまだない。取込タブでClaudeの取込データを貼って読み込む。</p>';document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===view));return}
+  m.innerHTML=view==='soon'?renderSoon(sim):view==='people'?renderPeople(sim):view==='rooms'?renderRooms(sim):view==='chart'?renderChart(sim):view==='warn'?renderWarn(sim):renderIO();
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===view));
+  if(sameView){if(window.scrollTo)window.scrollTo(0,sy);const rel=()=>{m.style.minHeight=''};if(window.requestAnimationFrame)requestAnimationFrame(()=>requestAnimationFrame(rel));else rel()}
+}
+
+function validate(p){
+  if(!p||!Array.isArray(p.people)||!Array.isArray(p.cases))throw new Error('people と cases が必要');
+  const names=new Set(p.people.map(x=>x.n));
+  for(const c of p.cases){if(!/^\d+-\d+$/.test(c.id))throw new Error('症例番号の形式が違う: '+c.id);
+    if(!tm(c.start))throw new Error(c.id+' の開始時刻がない');
+    for(const n of [...(c.ind||[]),...(c.em||[]),...(c.front||[]).map(f=>f[0])])if(!names.has(n))throw new Error(c.id+' の担当 '+n+' が people にいない')}
+  return p;
+}
+
+document.addEventListener('click',e=>{
+  const sm=e.target.closest('summary');if(sm){const d=sm.parentElement;openId=d.open?null:d.dataset.cid;return}
+  const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.v){view=t.dataset.v;openId=null;render();return}
+  if(t.dataset.goto){view='rooms';openId=t.dataset.goto;render();const el=document.querySelector('details[open]');if(el&&el.scrollIntoView)el.scrollIntoView({block:'center'});return}
+  if(t.dataset.unovr){if(S.ovr){const[id,k]=t.dataset.unovr.split('|');delete S.ovr[id+'|'+k]}save();render();return}
+  if(t.dataset.stampat){const[id,b,r]=t.dataset.stampat.split('|');const v=tm(document.getElementById('st-'+r).value);if(v==null)return;(S.stamps[id]=S.stamps[id]||{})[b]=v;save();render();return}
+  if(t.dataset.stampplan){const[id,b]=t.dataset.stampplan.split('|');(S.stamps[id]=S.stamps[id]||{})[b]=timeline(-1).ph[id][b];save();render();return}
+  if(t.dataset.setsched){const[id,r]=t.dataset.setsched.split('|');const v=tm(document.getElementById('sc-'+r).value);if(v==null)return;S.sched=S.sched||{};S.sched[id]=v;save();render();return}
+  if(t.dataset.unsched){if(S.sched)delete S.sched[t.dataset.unsched];save();render();return}
+  if(t.dataset.stamp){const[id,b]=t.dataset.stamp.split('|');(S.stamps[id]=S.stamps[id]||{})[b]=now();save();render();return}
+  if(t.dataset.clear){delete S.stamps[t.dataset.clear];save();render();return}
+  if(t.dataset.undo){const cs=S.plan.cases.filter(c=>roomOf(c.id)==t.dataset.undo).sort((a,b)=>+b.id.split('-')[1]-+a.id.split('-')[1]);
+    for(const c of cs){const A=S.stamps[c.id];if(!A)continue;for(const b of [...B].reverse())if(A[b]!=null){delete A[b];save();render();return}}return}
+  if(t.dataset.asplan){const T=now(),{ph}=timeline();const cs=S.plan.cases.filter(c=>roomOf(c.id)==t.dataset.asplan);
+    const saved=JSON.parse(JSON.stringify(S.stamps));
+    for(const c of cs.sort((a,b)=>+a.id.split('-')[1]-+b.id.split('-')[1])){const d=c.dur||[30,60,30];const A=S.stamps[c.id]=S.stamps[c.id]||{};
+      const prev=cs.filter(x=>+x.id.split('-')[1]<+c.id.split('-')[1]).map(x=>S.stamps[x.id]&&S.stamps[x.id].out).filter(v=>v!=null);
+      let v=A.in!=null?A.in:Math.max(tm(c.start),prev.length?Math.max(...prev):0);
+      const seq=[v,null,null,null];seq[1]=A.cut!=null?A.cut:seq[0]+d[0];seq[2]=A.close!=null?A.close:seq[1]+d[1];seq[3]=A.out!=null?A.out:seq[2]+d[2];
+      B.forEach((b,i)=>{if(A[b]==null&&seq[i]<=T)A[b]=seq[i]})}
+    save();render();return}
+  if(t.id==='minus'||t.id==='plus'){S.mode='manual';S.manual=(mode()==='real'?now():S.manual)+(t.id==='plus'?15:-15);save();render();return}
+  if(t.id==='doimp'){const msg=document.getElementById('iomsg');try{const p=validate(JSON.parse(document.getElementById('imp').value));S={plan:p,stamps:{},mode:null,manual:480};save();msg.className='msg';msg.textContent='読み込んだ。症例 '+p.cases.length+'件';view='soon';render()}catch(err){msg.className='msg err';msg.textContent='読み込めない: '+err.message}return}
+  if(t.id==='doexp'){document.getElementById('imp').value=JSON.stringify(Object.assign({},S.plan,{cases:S.plan.cases.map(eff)}));document.getElementById('iomsg').textContent='下の欄に書き出した(付け替えも反映)。長押しでコピーできる';return}
+  if(t.id==='doreset'){S={plan:DEFAULT,stamps:{},mode:null,manual:480};save();render();return}
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.ovr){const[id,k,i]=t.dataset.ovr.split('|');const c=S.plan.cases.find(c=>c.id===id);const e0=eff(c);
+    let cur=k==='main'?(e0.front||[]).map(f=>f[0]).slice(0,1):[...(e0[k]||[])];cur[+i]=t.value;cur=cur.filter(Boolean);
+    S.ovr=S.ovr||{};S.ovr[id+'|'+k]=cur;openId=id;save();render();return}
+  if(t.id==='mode'){S.mode=t.value;if(t.value==='manual')S.manual=now();save();render();return}
+  if(t.dataset.sched){S.sched=S.sched||{};const v=tm(t.value);if(v==null)delete S.sched[t.dataset.sched];else S.sched[t.dataset.sched]=v;save();render();return}
+  if(t.dataset.edit){const[id,b]=t.dataset.edit.split('|');const A=S.stamps[id]=S.stamps[id]||{};const v=tm(t.value);if(v==null)delete A[b];else A[b]=v;save();render()}
+});
+render();
+setInterval(()=>{if(mode()==='real'&&!document.activeElement.matches('input,textarea,select'))render()},30000);
+</script>
+</body>
+</html>
