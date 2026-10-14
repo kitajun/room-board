@@ -41,9 +41,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:700}
 input[type=time]{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px 6px;min-height:36px;font-variant-numeric:tabular-nums}
 nav{display:flex;gap:0;margin-top:8px}
-nav button{flex:1;border:none;border-bottom:3px solid transparent;border-radius:0;background:none;padding:8px 0;color:var(--sub)}
+nav button{flex:1;min-width:0;padding-left:0;padding-right:0;white-space:nowrap;font-size:14px;border:none;border-bottom:3px solid transparent;border-radius:0;background:none;padding:8px 0;color:var(--sub)}
 nav button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ink);font-weight:700}
-.badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--warn);color:#fff;font-size:12px;margin-left:4px}
+.badge{display:inline-block;min-width:16px;padding:0 4px;border-radius:8px;background:var(--warn);color:#fff;font-size:11px;margin-left:2px;line-height:16px}
 main{padding:12px 14px 40px}
 .person,.room{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden}
 .phead{display:flex;align-items:baseline;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
@@ -106,6 +106,10 @@ textarea{width:100%;min-height:180px;font:13px/1.4 ui-monospace,Menlo,monospace;
 .rcg{background:#9A9A9A;height:100%}.rcy{background:#E4EE6A;height:100%}.rcs{background:#C8E6C0;height:100%;flex:1}.rco{background:#BFE3F2;height:100%;flex:1}
 .rct{position:absolute;left:3px;top:2px;right:2px;font-size:10.5px;line-height:1.3;color:#111;white-space:nowrap;pointer-events:none}
 .rcdone{opacity:.55}
+.cform{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}
+.cform label{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--sub)}
+.cform .wide{grid-column:1/-1}
+.cform input,.cform select{width:100%;min-height:36px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px 6px;font-size:15px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 10px;font-size:12px;color:var(--sub);margin-bottom:8px}
 .legend span{display:inline-flex;align-items:center;gap:4px}
 .legend i{display:inline-block;width:14px;height:12px;border-radius:3px}
@@ -134,6 +138,7 @@ select{background:var(--card);border:1px solid var(--line);border-radius:8px;pad
     <button role="tab" data-v="soon" aria-selected="true">直近</button>
     <button role="tab" data-v="people" aria-selected="false">人</button>
     <button role="tab" data-v="rooms" aria-selected="false">部屋</button>
+    <button role="tab" data-v="cases" aria-selected="false">症例</button>
     <button role="tab" data-v="chart" aria-selected="false">図</button>
     <button role="tab" data-v="warn" aria-selected="false">警告<span class="badge" id="wcount" hidden></span></button>
     <button role="tab" data-v="io" aria-selected="false">取込</button>
@@ -153,7 +158,7 @@ let S=load();
 let view='soon',openId=null;
 
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.plan)return s}catch(e){}
-  return{plan:DEFAULT,stamps:{},mode:null,manual:480}}
+  return{plan:JSON.parse(JSON.stringify(DEFAULT)),stamps:{},mode:null,manual:480}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const tm=s=>{if(s==null||s==='')return null;const[a,b]=String(s).split(':');return +a*60+ +b};
 const hm=m=>m==null?'--:--':String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.round(m)%60).padStart(2,'0');
@@ -174,7 +179,7 @@ function timeline(Tx){
       const A=S.stamps[c.id]||{},d=c.dur||[30,60,30];
       const fix=(k,v)=>A[k]!=null?A[k]:Math.max(v,T);
       const sch=(S.sched||{})[c.id];
-      const base=sch!=null?sch:prev==null?tm(c.start):prevLive?prev+TURN:Math.max(tm(c.start),prev);
+      const base=sch!=null?Math.max(sch,prev??0):prev==null?tm(c.start):prevLive?prev+TURN:Math.max(tm(c.start),prev);
       const i=fix('in',base);
       prevLive=prevLive||Object.keys(A).length>0||sch!=null;
       const cu=fix('cut',i+d[0]),cl=fix('close',cu+d[1]),o=fix('out',cl+d[2]);
@@ -344,6 +349,45 @@ function renderRoomChart(sim){
   for(const x of S.plan.extras||[])if(x.k==='leave'){const t=tm(x.s);if(t>=lo&&t<=hi)h+=`<div style="position:absolute;left:${X(t)}px;top:0;bottom:0;border-left:1.5px dashed var(--warn);z-index:2"></div><div style="position:absolute;left:${X(t)+3}px;bottom:2px;font-size:10px;color:var(--warn);z-index:2">${esc(x.p)}退出</div>`}
   return h+'</div></div><p class="help">横にスクロールできる。箱を押すと部屋タブのその症例が開く。時刻は記録に合わせた予測。</p>';
 }
+const DUR0={GA:[45,120,30],spinal:[30,90,15],other:[0,60,0]};
+const TYL={GA:'全麻',spinal:'脊麻・差し逃げ',other:'関与なし'};
+let delArm=null,caseMsg='';
+const durOf=(v,ty)=>[v.d0,v.d1,v.d2].map((x,i)=>x===''||x==null||isNaN(+x)?DUR0[ty][i]:Math.max(0,Math.round(+x)));
+function renumber(mut){
+  const list=S.plan.cases.map(c=>({c,room:roomOf(c.id),old:c.id}));mut(list);
+  const byR={};for(const x of list)(byR[x.room]=byR[x.room]||[]).push(x);
+  const ix=x=>x.old?+x.old.split('-')[1]:99,map={};
+  for(const r in byR){byR[r].sort((a,b)=>tm(a.c.start)-tm(b.c.start)||ix(a)-ix(b));byR[r].forEach((x,i)=>{const n=r+'-'+(i+1);if(x.old)map[x.old]=n;x.c.id=n})}
+  const nS={},nSc={},nO={};
+  for(const k in S.stamps||{})if(map[k])nS[map[k]]=S.stamps[k];
+  for(const k in S.sched||{})if(map[k])nSc[map[k]]=S.sched[k];
+  for(const k in S.ovr||{}){const[i,f]=k.split('|');if(map[i])nO[map[i]+'|'+f]=S.ovr[k]}
+  S.stamps=nS;S.sched=nSc;S.ovr=nO;
+  S.plan.cases=Object.keys(byR).sort((a,b)=>a-b).flatMap(r=>byR[r].map(x=>x.c));
+  return map}
+function formVals(key){const f=document.querySelector(`[data-form="${key}"]`),v={};if(f)f.querySelectorAll('[data-cf]').forEach(e=>v[e.dataset.cf]=e.value);return v}
+function caseForm(key,c){
+  const ty=c?c.type:'GA',d=c?(c.dur||DUR0[ty]):['','',''];
+  const ps=nm=>`<select data-cf="${nm}"><option value=""></option>${S.plan.people.map(P=>`<option>${esc(P.n)}</option>`).join('')}</select>`;
+  let h=`<div class="cform" data-form="${esc(key)}">`;
+  h+=`<label>部屋<input type="number" inputmode="numeric" min="1" max="30" data-cf="room" value="${c?roomOf(c.id):''}"></label>`;
+  h+=`<label>入室<input type="time" data-cf="start" value="${c?c.start:''}"></label>`;
+  h+=`<label>種類<select data-cf="type">${Object.keys(TYL).map(k=>`<option value="${k}"${k===ty?' selected':''}>${TYL[k]}</option>`).join('')}</select></label>`;
+  h+=`<label class="wide">症例<input type="text" data-cf="label" value="${c?esc(c.label):''}" placeholder="帝王切開 など"></label>`;
+  h+=`<label>導入(分)<input type="number" inputmode="numeric" data-cf="d0" value="${d[0]}" placeholder="既定"></label><label>手術(分)<input type="number" inputmode="numeric" data-cf="d1" value="${d[1]}" placeholder="既定"></label><label>抜管(分)<input type="number" inputmode="numeric" data-cf="d2" value="${d[2]}" placeholder="既定"></label>`;
+  if(!c)h+=`<label>前(全麻)${ps('front')}</label><label>導入・刺す${ps('i1')}</label><label>導入2${ps('i2')}</label><label>抜管${ps('e1')}</label><label>抜管2${ps('e2')}</label>`;
+  return h+'</div>'}
+function renderCases(sim){
+  let h=`<p class="help">予定そのものを直す画面。追加・削除・部屋や入室時刻の変更をすると、部屋ごとに入室順で番号を振り直す。入室時刻を変えた症例は、その時刻より前には繰り上がらない。担当の付け替えは各症例のボタンから。</p>`;
+  if(caseMsg)h+=`<p class="msg" style="font-weight:700">${esc(caseMsg)}</p>`;
+  h+=`<details class="room" data-cid="__add"${openId==='__add'?' open':''}><summary data-sum="1" style="padding:10px 12px;font-weight:700;color:var(--ink)">＋ 症例を追加</summary><div style="padding:0 12px 12px">${caseForm('add',null)}<p class="help">時間を空欄にすると種類ごとの既定値。脊麻・差し逃げは「導入・刺す」に刺す人を入れる。</p><div class="row"><button class="primary" data-addcase="1">追加する</button></div></div></details>`;
+  for(const r of Object.keys(sim.byRoom).sort((a,b)=>a-b)){
+    h+=`<section class="room"><div class="rhead"><span class="rnum">${r}室</span></div><div class="cases">`;
+    for(const c of sim.byRoom[r]){const p=sim.ph[c.id],A=S.stamps[c.id]||{},st=A.out!=null?'退室済':A.in!=null?'進行中':'未入室';
+      const e=eff(c),who=c.type==='GA'?`前 ${(e.front||[]).map(f=>f[0]).join('→')||'—'} 導 ${(e.ind||[]).join('・')||'—'} 抜 ${(e.em||[]).join('・')||'—'}`:c.type==='spinal'?`刺す ${(e.ind||[]).join('・')||'—'}`:'関与なし';
+      h+=`<details class="crow" data-cid="${c.id}"${openId===c.id?' open':''}><summary data-sum="1"><span class="ctop" style="display:inline-flex;width:calc(100% - 20px)"><span class="cid">${c.id}</span><span class="clabel">${esc(c.label)}</span><span class="ctimes">${c.start} ${st}</span></span><div class="help" style="margin-left:18px">${esc(who)}<br>予測 ${hm(p.in)}–${hm(p.out)}</div></summary>${caseForm('e:'+c.id,c)}<div class="row"><button class="primary" data-savecase="${c.id}">変更を保存</button><button data-goto="${c.id}">担当の付け替え</button><button data-delcase="${c.id}" style="color:var(--warn)">${delArm===c.id?'もう一度押すと削除':'削除'}</button></div></details>`}
+    h+='</div></section>'}
+  return h}
 function renderChart(sim){
   const tg=`<div class="cmode"><button data-cm="room" aria-pressed="${S.chartMode!=='person'}">部屋ごと</button><button data-cm="person" aria-pressed="${S.chartMode==='person'}">人ごと</button></div>`;
   return tg+(S.chartMode==='person'?renderPersonChart(sim):renderRoomChart(sim));
@@ -383,9 +427,9 @@ function render(){
   const sy=window.scrollY||0,keepH=m.offsetHeight||0,sameView=window.__lastView===view;window.__lastView=view;
   if(sameView&&keepH)m.style.minHeight=keepH+'px';
   const oldRc=document.querySelector('.rc'),rcLeft=oldRc&&sameView?oldRc.scrollLeft:null;
-  if(view==='rooms'&&openId==null){const op=[...document.querySelectorAll('details[open]')].map(d=>d.dataset.cid).filter(Boolean);if(op.length)openId=op[0]}
-  if(!S.plan.cases.length&&view!=='io'){m.innerHTML='<p class="ok">予定がまだない。取込タブでClaudeの取込データを貼って読み込む。</p>';document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===view));return}
-  m.innerHTML=view==='soon'?renderSoon(sim):view==='people'?renderPeople(sim):view==='rooms'?renderRooms(sim):view==='chart'?renderChart(sim):view==='warn'?renderWarn(sim):renderIO();
+  if((view==='rooms'||view==='cases')&&openId==null){const op=[...document.querySelectorAll('details[open]')].map(d=>d.dataset.cid).filter(Boolean);if(op.length)openId=op[0]}
+  if(!S.plan.cases.length&&view!=='io'&&view!=='cases'){m.innerHTML='<p class="ok">予定がまだない。取込タブでClaudeの取込データを貼って読み込むか、症例タブで追加する。</p>';document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===view));return}
+  m.innerHTML=view==='soon'?renderSoon(sim):view==='people'?renderPeople(sim):view==='rooms'?renderRooms(sim):view==='cases'?renderCases(sim):view==='chart'?renderChart(sim):view==='warn'?renderWarn(sim):renderIO();
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===view));
   const rc=document.querySelector('.rc');if(rc){if(rcLeft!=null)rc.scrollLeft=rcLeft;else{const nl=rc.querySelector('[data-now]');if(nl)rc.scrollLeft=Math.max(0,parseFloat(nl.style.left)-120)}}
   if(sameView){if(window.scrollTo)window.scrollTo(0,sy);const rel=()=>{m.style.minHeight=''};if(window.requestAnimationFrame)requestAnimationFrame(()=>requestAnimationFrame(rel));else rel()}
@@ -404,8 +448,25 @@ document.addEventListener('click',e=>{
   const bx=e.target.closest('[data-goto2]');if(bx){view='rooms';openId=bx.dataset.goto2;render();const el=document.querySelector('details[open]');if(el&&el.scrollIntoView)el.scrollIntoView({block:'center'});return}
   const sm=e.target.closest('summary');if(sm){const d=sm.parentElement;openId=d.open?null:d.dataset.cid;return}
   const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.addcase){const v=formVals('add'),room=parseInt(v.room),st=tm(v.start);
+    if(!(room>=1)||st==null){caseMsg='部屋と入室時刻を入れる';render();return}
+    const ty=v.type||'GA',c={id:'new',label:v.label||'追加症例',type:ty,start:hm(st),dur:durOf(v,ty)};
+    if(ty==='GA'){c.front=v.front?[[v.front]]:[];c.ind=[v.i1,v.i2].filter(Boolean);c.em=[v.e1,v.e2].filter(Boolean)}
+    if(ty==='spinal')c.ind=[v.i1].filter(Boolean);
+    c.owner=[...new Set([...(c.front||[]).map(f=>f[0]),...(c.ind||[]),...(c.em||[])])];
+    renumber(L=>L.push({c,room,old:null}));S.sched=S.sched||{};S.sched[c.id]=st;openId=c.id;caseMsg=c.id+' を追加した';delArm=null;save();render();return}
+  if(t.dataset.savecase){const id=t.dataset.savecase,v=formVals('e:'+id),c=S.plan.cases.find(c=>c.id===id);if(!c)return;
+    const room=parseInt(v.room),st=tm(v.start);if(!(room>=1)||st==null){caseMsg='部屋と入室時刻を入れる';render();return}
+    const moved=hm(st)!==c.start||roomOf(id)!==room,ty=v.type||c.type;
+    if(v.label)c.label=v.label;if(ty!==c.type){c.type=ty;if(ty!=='GA'){delete c.front;delete c.em}}
+    c.dur=durOf(v,ty);c.start=hm(st);
+    renumber(L=>{const x=L.find(x=>x.c===c);if(x)x.room=room});
+    if(moved){S.sched=S.sched||{};S.sched[c.id]=st}
+    openId=c.id;caseMsg=(id!==c.id?id+' を '+c.id+' に':c.id+' を')+'変更した';delArm=null;save();render();return}
+  if(t.dataset.delcase){const id=t.dataset.delcase;if(delArm!==id){delArm=id;render();return}
+    renumber(L=>{const i=L.findIndex(x=>x.old===id);if(i>=0)L.splice(i,1)});delArm=null;openId=null;caseMsg=id+' を削除した';save();render();return}
   if(t.dataset.cm){S.chartMode=t.dataset.cm;save();render();return}
-  if(t.dataset.v){view=t.dataset.v;openId=null;render();return}
+  if(t.dataset.v){view=t.dataset.v;openId=null;caseMsg='';delArm=null;render();return}
   if(t.dataset.goto){view='rooms';openId=t.dataset.goto;render();const el=document.querySelector('details[open]');if(el&&el.scrollIntoView)el.scrollIntoView({block:'center'});return}
   if(t.dataset.unovr){if(S.ovr){const[id,k]=t.dataset.unovr.split('|');delete S.ovr[id+'|'+k]}save();render();return}
   if(t.dataset.stampat){const[id,b,r]=t.dataset.stampat.split('|');const v=tm(document.getElementById('st-'+r).value);if(v==null)return;(S.stamps[id]=S.stamps[id]||{})[b]=v;save();render();return}
@@ -427,7 +488,7 @@ document.addEventListener('click',e=>{
   if(t.id==='minus'||t.id==='plus'){S.mode='manual';S.manual=(mode()==='real'?now():S.manual)+(t.id==='plus'?15:-15);save();render();return}
   if(t.id==='doimp'){const msg=document.getElementById('iomsg');try{const p=validate(JSON.parse(document.getElementById('imp').value));S={plan:p,stamps:{},mode:null,manual:480};save();msg.className='msg';msg.textContent='読み込んだ。症例 '+p.cases.length+'件';view='soon';render()}catch(err){msg.className='msg err';msg.textContent='読み込めない: '+err.message}return}
   if(t.id==='doexp'){document.getElementById('imp').value=JSON.stringify(Object.assign({},S.plan,{cases:S.plan.cases.map(eff)}));document.getElementById('iomsg').textContent='下の欄に書き出した(付け替えも反映)。長押しでコピーできる';return}
-  if(t.id==='doreset'){S={plan:DEFAULT,stamps:{},mode:null,manual:480};save();render();return}
+  if(t.id==='doreset'){S={plan:JSON.parse(JSON.stringify(DEFAULT)),stamps:{},mode:null,manual:480};save();render();return}
 });
 document.addEventListener('change',e=>{
   const t=e.target;
@@ -439,7 +500,7 @@ document.addEventListener('change',e=>{
   if(t.dataset.edit){const[id,b]=t.dataset.edit.split('|');const A=S.stamps[id]=S.stamps[id]||{};const v=tm(t.value);if(v==null)delete A[b];else A[b]=v;save();render()}
 });
 render();
-setInterval(()=>{if(mode()==='real'&&!document.activeElement.matches('input,textarea,select'))render()},30000);
+setInterval(()=>{if(mode()==='real'&&view!=='cases'&&!document.activeElement.matches('input,textarea,select'))render()},30000);
 </script>
 </body>
 </html>
